@@ -1,168 +1,290 @@
 # Sistema de Evaluación de Proveedores
 
-Aplicación full-stack para evaluación de riesgo de proveedores.
+Aplicación completa para la evaluación de riesgo de proveedores con backend en FastAPI y frontend en React.
+
+## Tecnologías
 
 - Backend: FastAPI + SQLAlchemy 2.0 + PostgreSQL
 - Frontend: React 18 + Vite
-- Autenticación: JWT
-- Migraciones: Alembic
+- Autenticación: JWT (JSON Web Tokens)
+- Base de datos: PostgreSQL con migraciones Alembic
 - Contenedores: Docker + Docker Compose
-- Tests: pytest (backend)
+- Tests: pytest
 
----
-
-## Requisitos
+## Requisitos del sistema
 
 - Docker
 - Docker Compose
-- Node.js 18+ (solo para ejecutar el frontend en modo desarrollo)
 
----
+## Instalación y configuración
 
-## Paso a paso (solo con Docker)
-
-> Ejecuta todo desde la carpeta raíz del repo (`pt-proveedores/`).
-
-### 1) Clonar el repositorio
+### 1. Clonar el repositorio
 
 ```bash
-git clone <URL-DEL-REPO>
+git clone <URL-DEL-REPOSITORIO>
 cd pt-proveedores
 ```
 
-### 2) Construir y levantar servicios
+### 2. Construir y levantar los servicios
 
 ```bash
 docker compose up -d --build
 ```
 
-**Servicios:**
-- `api` → FastAPI en http://localhost:8000
-- `db` → PostgreSQL
+Este comando construirá las imágenes y levantará dos servicios:
+- `api`: Backend FastAPI en el puerto 8000
+- `db`: Base de datos PostgreSQL en el puerto 5432
 
-### 3) Ejecutar migraciones de base de datos
+### 3. Ejecutar las migraciones de base de datos
 
 ```bash
 docker compose exec api alembic upgrade head
 ```
 
-### 4) Cargar datos iniciales (seed)
+### 4. Cargar datos iniciales
 
-El repo incluye `seed_data.py` en la raíz. Crea:
-- Usuario admin `admin@example.com` / `Admin123!`
-- Empresas y solicitudes de ejemplo
+El proyecto incluye un script `seed_data.py` que crea datos de prueba:
 
 ```bash
 docker compose exec api python seed_data.py
 ```
 
-### 5) Configurar y levantar el frontend
+Esto creará:
+- Usuario administrador: `admin@example.com` / `Admin123!`
+- 4 empresas de ejemplo (Acme SpA, Globex Ltd., Initech, Hooli)
+- 6 solicitudes de evaluación con diferentes estados y puntajes de riesgo
+
+### 5. Configurar el frontend
 
 ```bash
 cd frontend
 npm install
+```
+
+Crear el archivo de variables de entorno:
+
+```bash
 echo "VITE_API_URL=http://localhost:8000" > .env
+```
+
+Iniciar el servidor de desarrollo:
+
+```bash
 npm run dev
 ```
 
-**Acceso:**
-- **Frontend**: http://localhost:5173
-- **API**: http://localhost:8000
-- **Swagger**: http://localhost:8000/docs
+## Acceso a la aplicación
 
----
+Una vez completados todos los pasos:
 
-## Uso rápido
+- Frontend: http://localhost:5173
+- API Backend: http://localhost:8000
+- Documentación API (Swagger): http://localhost:8000/docs
 
-1. Abre http://localhost:5173
-2. Inicia sesión con `admin@example.com` / `Admin123!`
-3. Crea y lista empresas y solicitudes desde la UI
+### Credenciales de acceso
 
-> **Nota**: La API expone rutas con y sin "/" final. Para evitar redirecciones 307, usa las rutas con "/" (por ejemplo `/companies/`, `/requests/`).
+- Email: `admin@example.com`
+- Contraseña: `Admin123!`
 
----
+## Funcionalidades principales
 
-## Paginación desde el frontend o clientes HTTP
+### Autenticación
+- Sistema de login con JWT
+- Roles de usuario (admin, user)
+- Persistencia de sesión
 
-Los listados devuelven 10 elementos por defecto. Puedes paginar con `page` y `page_size`:
+### Gestión de empresas
+- Crear empresas con nombre, RUT/tax_id y país
+- Listar todas las empresas registradas
+- Validación de datos de entrada
+
+### Solicitudes de evaluación
+- Crear solicitudes asociadas a empresas
+- Cálculo automático de puntaje de riesgo basado en:
+  - PEP flag (Persona Expuesta Políticamente): +60 puntos
+  - Lista de sanciones: +40 puntos
+  - Pagos tardíos: +10 puntos cada uno (máximo 3)
+- Estados de solicitud: pendiente, aprobada, rechazada
+- Tabla con funciones de búsqueda, filtros y paginación
+
+## Comandos útiles para desarrollo
+
+### Ver logs de los servicios
 
 ```bash
-GET /companies/?page=1&page_size=25
-GET /requests/?page=2&page_size=50
-```
-
----
-
-## Comandos útiles
-
-### Ver logs
-```bash
+# Logs del backend
 docker compose logs -f api
+
+# Logs de la base de datos
 docker compose logs -f db
+
+# Logs de todos los servicios
+docker compose logs -f
 ```
 
-### Ejecutar tests del backend
+### Ejecutar tests
+
 ```bash
 docker compose exec api pytest -v
 ```
 
-### Resetear y volver a sembrar la base
+### Resetear la base de datos
+
 ```bash
+# Bajar todas las migraciones
 docker compose exec api alembic downgrade base
+
+# Aplicar migraciones nuevamente
 docker compose exec api alembic upgrade head
+
+# Volver a cargar datos iniciales
 docker compose exec api python seed_data.py
 ```
 
-### Detener y eliminar contenedores
+### Crear nuevas migraciones
+
 ```bash
-docker compose down
+docker compose exec api alembic revision --autogenerate -m "descripción del cambio"
 ```
 
----
+### Detener los servicios
+
+```bash
+# Detener contenedores
+docker compose stop
+
+# Detener y eliminar contenedores, redes y volúmenes
+docker compose down
+
+# Eliminar también los volúmenes de datos
+docker compose down -v
+```
 
 ## Estructura del proyecto
 
 ```
 pt-proveedores/
 ├── app/                     # Backend FastAPI
-│   ├── api/                 # Endpoints
-│   ├── models/              # Modelos SQLAlchemy
-│   ├── schemas/             # Esquemas Pydantic
-│   └── services/            # Lógica de negocio
-├── frontend/                # Frontend React (Vite)
-│   └── src/
-│       ├── api.js           # Cliente HTTP
-│       ├── AuthContext.jsx  # Contexto de autenticación
-│       └── App.jsx          # App principal
-├── migrations/              # Migraciones Alembic
-├── tests/                   # Tests backend (pytest)
-├── seed_data.py             # Script de seed
-├── docker-compose.yml
-├── Dockerfile
-└── requirements.txt
+│   ├── api/                 # Endpoints de la API
+│   │   ├── auth.py         # Autenticación y usuarios
+│   │   ├── companies.py    # CRUD de empresas
+│   │   └── requests.py     # CRUD de solicitudes
+│   ├── models/             # Modelos SQLAlchemy
+│   │   ├── user.py         # Modelo de usuario
+│   │   ├── company.py      # Modelo de empresa
+│   │   └── request.py      # Modelo de solicitud
+│   ├── schemas/            # Esquemas Pydantic
+│   └── services/           # Lógica de negocio
+├── frontend/               # Frontend React
+│   ├── src/
+│   │   ├── components/     # Componentes React
+│   │   ├── api.js         # Cliente HTTP para API
+│   │   ├── AuthContext.jsx # Contexto de autenticación
+│   │   └── App.jsx        # Componente principal
+│   ├── package.json
+│   └── vite.config.js
+├── migrations/             # Migraciones Alembic
+├── tests/                  # Tests del backend
+├── seed_data.py           # Script para datos iniciales
+├── docker-compose.yml     # Configuración de servicios
+├── Dockerfile            # Imagen del backend
+├── requirements.txt      # Dependencias Python
+└── README.md
 ```
-
----
 
 ## Variables de entorno
 
-El `docker-compose.yml` ya define lo necesario para desarrollo. Para el frontend asegúrate de crear `frontend/.env`:
+### Backend
 
-```ini
+Las variables están configuradas en `docker-compose.yml`:
+
+- `DATABASE_URL`: URL de conexión a PostgreSQL
+- `JWT_SECRET`: Clave secreta para firmar tokens JWT
+- `JWT_ALGORITHM`: Algoritmo de encriptación (HS256)
+
+### Frontend
+
+Crear el archivo `frontend/.env`:
+
+```
 VITE_API_URL=http://localhost:8000
 ```
 
-Si quieres personalizar `DATABASE_URL` o el secreto JWT del backend, edita `docker-compose.yml` y vuelve a levantar con `docker compose up -d --build`.
+## API Endpoints
 
----
+### Autenticación
+- `POST /auth/register` - Registrar nuevo usuario
+- `POST /auth/login` - Iniciar sesión (devuelve access_token)
 
-## Endpoints principales
+### Empresas
+- `GET /companies/` - Listar empresas (paginado)
+- `POST /companies/` - Crear nueva empresa
+- `GET /companies/{id}` - Obtener empresa por ID
 
-- `POST /auth/login` → devuelve `access_token`
-- `GET /companies/` → lista empresas (paginado)
-- `POST /companies/` → crea empresa
-- `GET /requests/` → lista solicitudes (paginado)
-- `POST /requests/` → crea solicitud y calcula `risk_score`
+### Solicitudes
+- `GET /requests/` - Listar solicitudes (paginado)
+- `POST /requests/` - Crear nueva solicitud
+- `GET /requests/{id}` - Obtener solicitud por ID
 
-**Documentación completa**: http://localhost:8000/docs
+### Paginación
+
+Todos los listados soportan paginación:
+
+```bash
+GET /companies/?page=1&page_size=25
+GET /requests/?page=2&page_size=50
+```
+
+## Solución de problemas
+
+### Error de conexión a la base de datos
+
+```bash
+# Verificar que los contenedores estén corriendo
+docker compose ps
+
+# Reiniciar el servicio de base de datos
+docker compose restart db
+```
+
+### Puerto ya en uso
+
+```bash
+# Verificar qué proceso usa el puerto
+netstat -ano | findstr :8000
+netstat -ano | findstr :5432
+
+# Detener los contenedores y cambiar puertos en docker-compose.yml si es necesario
+docker compose down
+```
+
+### Problemas con migraciones
+
+```bash
+# Ver el estado actual de las migraciones
+docker compose exec api alembic current
+
+# Ver historial de migraciones
+docker compose exec api alembic history
+
+# Aplicar una migración específica
+docker compose exec api alembic upgrade <revision>
+```
+
+### Limpiar todo y empezar de nuevo
+
+```bash
+# Detener y eliminar todo
+docker compose down -v
+
+# Eliminar imágenes
+docker rmi pt-proveedores-api
+
+# Volver a construir
+docker compose up -d --build
+
+# Aplicar migraciones y seed
+docker compose exec api alembic upgrade head
+docker compose exec api python seed_data.py
+```
 
