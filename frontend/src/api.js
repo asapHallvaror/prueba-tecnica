@@ -15,6 +15,12 @@ export async function login(data) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || "Credenciales incorrectas");
+  }
+  
   return res.json();
 }
 

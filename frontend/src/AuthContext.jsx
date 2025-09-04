@@ -7,12 +7,19 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem("token") || null);
 
   async function loginUser(email, password) {
-    const data = await login({ email, password });
-    if (data.access_token) {
-      setToken(data.access_token);
-      localStorage.setItem("token", data.access_token);
+    try {
+      const data = await login({ email, password });
+      if (data.access_token) {
+        setToken(data.access_token);
+        localStorage.setItem("token", data.access_token);
+        return data;
+      } else {
+        throw new Error("No se recibió token de acceso");
+      }
+    } catch (error) {
+      // Re-lanzar el error para que lo capture el componente
+      throw error;
     }
-    return data;
   }
 
   function logout() {
