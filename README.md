@@ -1,304 +1,168 @@
 # Sistema de Evaluación de Proveedores
 
-Este proyecto implementa una aplicación completa para la evaluación de riesgo de proveedores, con backend en FastAPI y frontend en React.
+Aplicación full-stack para evaluación de riesgo de proveedores.
 
-## 🏗️ Arquitectura del Proyecto
+- Backend: FastAPI + SQLAlchemy 2.0 + PostgreSQL
+- Frontend: React 18 + Vite
+- Autenticación: JWT
+- Migraciones: Alembic
+- Contenedores: Docker + Docker Compose
+- Tests: pytest (backend)
 
-- **Backend**: FastAPI + SQLAlchemy 2.0 + PostgreSQL
-- **Frontend**: React 18 + Vite
-- **Autenticación**: JWT (JSON Web Tokens)
-- **Base de Datos**: PostgreSQL con migraciones Alembic
-- **Containerización**: Docker + Docker Compose
-- **Testing**: pytest para backend
+---
 
-## Requisitos del Sistema
+## Requisitos
 
-- **Docker** y **Docker Compose** (recomendado)
-- O alternativamente:
-  - Python 3.9+
-  - Node.js 18+
-  - PostgreSQL 13+
+- Docker
+- Docker Compose
+- Node.js 18+ (solo para ejecutar el frontend en modo desarrollo)
 
-## Instalación y Configuración
+---
 
-### Opción 1: Con Docker (Recomendado)
+## Paso a paso (solo con Docker)
 
-1. **Clonar el repositorio**
+> Ejecuta todo desde la carpeta raíz del repo (`pt-proveedores/`).
+
+### 1) Clonar el repositorio
+
 ```bash
-git clone <url-del-repositorio>
+git clone <URL-DEL-REPO>
 cd pt-proveedores
 ```
 
-2. **Levantar los servicios**
+### 2) Construir y levantar servicios
+
 ```bash
-docker-compose up -d
+docker compose up -d --build
 ```
 
-3. **Ejecutar migraciones**
+**Servicios:**
+- `api` → FastAPI en http://localhost:8000
+- `db` → PostgreSQL
+
+### 3) Ejecutar migraciones de base de datos
+
 ```bash
-docker-compose exec api alembic upgrade head
+docker compose exec api alembic upgrade head
 ```
 
-4. **Crear usuario administrador inicial**
+### 4) Cargar datos iniciales (seed)
+
+El repo incluye `seed_data.py` en la raíz. Crea:
+- Usuario admin `admin@example.com` / `Admin123!`
+- Empresas y solicitudes de ejemplo
+
 ```bash
-docker-compose exec api python -c "
-from app.database import get_db
-from app.models.user import User
-from app.schemas.user import UserRole
-from passlib.context import CryptContext
-from sqlalchemy.orm import Session
-
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
-db = next(get_db())
-
-# Verificar si ya existe un admin
-existing_admin = db.query(User).filter(User.role == UserRole.admin).first()
-if not existing_admin:
-    admin_user = User(
-        email='admin@test.com',
-        hashed_password=pwd_context.hash('admin123'),
-        role=UserRole.admin
-    )
-    db.add(admin_user)
-    db.commit()
-    print('Usuario admin creado: admin@test.com / admin123')
-else:
-    print('Usuario admin ya existe')
-"
+docker compose exec api python seed_data.py
 ```
 
-5. **Configurar el frontend**
+### 5) Configurar y levantar el frontend
+
 ```bash
 cd frontend
 npm install
-```
-
-6. **Crear archivo de variables de entorno para el frontend**
-```bash
-# En la carpeta frontend, crear archivo .env
 echo "VITE_API_URL=http://localhost:8000" > .env
-```
-
-7. **Iniciar el frontend**
-```bash
 npm run dev
 ```
 
-### Opción 2: Instalación Manual
+**Acceso:**
+- **Frontend**: http://localhost:5173
+- **API**: http://localhost:8000
+- **Swagger**: http://localhost:8000/docs
 
-#### Backend
+---
 
-1. **Instalar dependencias de Python**
+## Uso rápido
+
+1. Abre http://localhost:5173
+2. Inicia sesión con `admin@example.com` / `Admin123!`
+3. Crea y lista empresas y solicitudes desde la UI
+
+> **Nota**: La API expone rutas con y sin "/" final. Para evitar redirecciones 307, usa las rutas con "/" (por ejemplo `/companies/`, `/requests/`).
+
+---
+
+## Paginación desde el frontend o clientes HTTP
+
+Los listados devuelven 10 elementos por defecto. Puedes paginar con `page` y `page_size`:
+
 ```bash
-pip install -r requirements.txt
+GET /companies/?page=1&page_size=25
+GET /requests/?page=2&page_size=50
 ```
 
-2. **Configurar variables de entorno**
+---
+
+## Comandos útiles
+
+### Ver logs
 ```bash
-export DATABASE_URL="postgresql+psycopg2://appuser:apppass@localhost:5432/appdb"
-export JWT_SECRET="supersecret"
-export JWT_ALGORITHM="HS256"
+docker compose logs -f api
+docker compose logs -f db
 ```
-
-3. **Configurar PostgreSQL**
-```bash
-# Crear base de datos
-createdb appdb
-```
-
-4. **Ejecutar migraciones**
-```bash
-alembic upgrade head
-```
-
-5. **Iniciar el servidor**
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-#### Frontend
-
-1. **Instalar dependencias**
-```bash
-cd frontend
-npm install
-```
-
-2. **Configurar variables de entorno**
-```bash
-# Crear archivo .env en la carpeta frontend
-echo "VITE_API_URL=http://localhost:8000" > .env
-```
-
-3. **Iniciar el servidor de desarrollo**
-```bash
-npm run dev
-```
-
-## 🔧 Variables de Entorno
-
-### Backend
-| Variable | Descripción | Valor por defecto |
-|----------|-------------|-------------------|
-| `DATABASE_URL` | URL de conexión a PostgreSQL | `postgresql+psycopg2://appuser:apppass@db:5432/appdb` |
-| `JWT_SECRET` | Clave secreta para JWT | `supersecret` |
-| `JWT_ALGORITHM` | Algoritmo de encriptación JWT | `HS256` |
-
-### Frontend
-| Variable | Descripción | Valor por defecto |
-|----------|-------------|-------------------|
-| `VITE_API_URL` | URL del backend API | `http://localhost:8000` |
-
-## 🗄️ Base de Datos y Migraciones
-
-### Ejecutar migraciones
-```bash
-# Con Docker
-docker-compose exec api alembic upgrade head
-
-# Sin Docker
-alembic upgrade head
-```
-
-### Crear nueva migración
-```bash
-# Con Docker
-docker-compose exec api alembic revision --autogenerate -m "descripción del cambio"
-
-# Sin Docker
-alembic revision --autogenerate -m "descripción del cambio"
-```
-
-### Rollback de migración
-```bash
-# Con Docker
-docker-compose exec api alembic downgrade -1
-
-# Sin Docker
-alembic downgrade -1
-```
-
-## Datos Iniciales (Seed)
-
-### Usuario Administrador
-El sistema requiere un usuario administrador para funcionar. Puedes crearlo de las siguientes maneras:
-
-**Opción 1: Script automático (ya incluido en las instrucciones de Docker)**
-
-**Opción 2: Manualmente a través de la API**
-```bash
-curl -X POST "http://localhost:8000/auth/register" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@test.com",
-    "password": "admin123",
-    "role": "admin"
-  }'
-```
-
-**Opción 3: A través del frontend**
-1. Ve a `http://localhost:5173`
-2. Usa las credenciales: `admin@test.com` / `admin123`
-
-### Datos de Prueba
-Una vez que tengas acceso al sistema, puedes crear empresas y solicitudes de evaluación a través del frontend.
-
-## 🧪 Testing
 
 ### Ejecutar tests del backend
 ```bash
-# Con Docker
-docker-compose exec api pytest
-
-# Sin Docker
-pytest
+docker compose exec api pytest -v
 ```
 
-### Ejecutar tests con coverage
+### Resetear y volver a sembrar la base
 ```bash
-# Con Docker
-docker-compose exec api pytest --cov=app
-
-# Sin Docker
-pytest --cov=app
+docker compose exec api alembic downgrade base
+docker compose exec api alembic upgrade head
+docker compose exec api python seed_data.py
 ```
 
-## Uso de la Aplicación
+### Detener y eliminar contenedores
+```bash
+docker compose down
+```
 
-### Acceso
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8000
-- **Documentación API**: http://localhost:8000/docs
+---
 
-### Credenciales por defecto
-- **Email**: admin@test.com
-- **Password**: admin123
-
-### Funcionalidades Principales
-
-1. **Autenticación JWT**
-   - Login/logout de usuarios
-   - Roles: admin y user
-
-2. **Gestión de Empresas**
-   - Crear empresas con nombre, RUT y país
-   - Listar todas las empresas
-
-3. **Solicitudes de Evaluación**
-   - Crear solicitudes asociadas a empresas
-   - Cálculo automático de riesgo basado en:
-     - PEP flag (+60 puntos)
-     - Lista de sanciones (+40 puntos)
-     - Pagos tardíos (+10 puntos cada uno, máximo +30)
-   - Tabla con búsqueda, filtros y paginación
-
-## 🔍 Estructura del Proyecto
+## Estructura del proyecto
 
 ```
 pt-proveedores/
-├── app/                    # Backend FastAPI
-│   ├── api/               # Endpoints de la API
-│   ├── models/            # Modelos SQLAlchemy
-│   ├── schemas/           # Esquemas Pydantic
-│   └── services/          # Lógica de negocio
-├── frontend/              # Frontend React
-│   ├── src/
-│   │   ├── components/    # Componentes React
-│   │   ├── api.js        # Cliente API
-│   │   └── AuthContext.jsx # Contexto de autenticación
-├── migrations/            # Migraciones Alembic
-├── tests/                # Tests del backend
-├── docker-compose.yml    # Configuración Docker
-└── requirements.txt      # Dependencias Python
+├── app/                     # Backend FastAPI
+│   ├── api/                 # Endpoints
+│   ├── models/              # Modelos SQLAlchemy
+│   ├── schemas/             # Esquemas Pydantic
+│   └── services/            # Lógica de negocio
+├── frontend/                # Frontend React (Vite)
+│   └── src/
+│       ├── api.js           # Cliente HTTP
+│       ├── AuthContext.jsx  # Contexto de autenticación
+│       └── App.jsx          # App principal
+├── migrations/              # Migraciones Alembic
+├── tests/                   # Tests backend (pytest)
+├── seed_data.py             # Script de seed
+├── docker-compose.yml
+├── Dockerfile
+└── requirements.txt
 ```
 
-## Troubleshooting
+---
 
-### Puerto ya en uso
-```bash
-# Verificar qué proceso usa el puerto
-lsof -i :8000  # Backend
-lsof -i :5173  # Frontend
+## Variables de entorno
 
-# Matar proceso si es necesario
-kill -9 <PID>
+El `docker-compose.yml` ya define lo necesario para desarrollo. Para el frontend asegúrate de crear `frontend/.env`:
+
+```ini
+VITE_API_URL=http://localhost:8000
 ```
 
-### Problemas de base de datos
-```bash
-# Reiniciar contenedor de base de datos
-docker-compose restart db
+Si quieres personalizar `DATABASE_URL` o el secreto JWT del backend, edita `docker-compose.yml` y vuelve a levantar con `docker compose up -d --build`.
 
-# Ver logs de la base de datos
-docker-compose logs db
-```
+---
 
-### Problemas de CORS
-Verifica que el frontend esté corriendo en `http://localhost:5173` o actualiza la configuración de CORS en `app/main.py`.
+## Endpoints principales
 
-## Notas de Desarrollo
+- `POST /auth/login` → devuelve `access_token`
+- `GET /companies/` → lista empresas (paginado)
+- `POST /companies/` → crea empresa
+- `GET /requests/` → lista solicitudes (paginado)
+- `POST /requests/` → crea solicitud y calcula `risk_score`
 
-- El backend incluye validación automática con Pydantic
-- El frontend usa Context API para manejo de estado de autenticación
-- Las migraciones se ejecutan automáticamente en el contenedor
-- Los tests cubren los endpoints principales y la lógica de cálculo de riesgo
+**Documentación completa**: http://localhost:8000/docs
+
