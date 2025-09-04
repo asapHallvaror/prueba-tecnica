@@ -11,7 +11,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/register", response_model=UserRead, status_code=201)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
-    # 🚨 Solo bloquear cuando se intenta registrar admin y ya existe uno
+    # Solo bloquear cuando se intenta registrar admin y ya existe uno
     if user_in.role == UserRole.admin:
         existing_admin = db.query(User).filter(User.role == UserRole.admin).first()
         if existing_admin:

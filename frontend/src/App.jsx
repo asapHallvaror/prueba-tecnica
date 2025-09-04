@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { createCompany, listCompanies, createRequest, listRequests } from "./api";
 import "./components/Login.css";
 import Login from "./components/login";
+import TablaRequests from "./components/tablaRequests";
 
 
 function Companies() {
@@ -318,6 +319,7 @@ function Content() {
           </div>
           <Companies />
           <Requests />
+          <TablaRequests />
         </>
       )}
     </>
