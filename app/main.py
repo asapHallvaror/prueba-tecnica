@@ -1,12 +1,21 @@
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from app.api import auth, companies, requests
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Solicitudes de Evaluación de Proveedores")
 
 app.include_router(auth.router)
 app.include_router(companies.router)
 app.include_router(requests.router)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # o ["*"] para pruebas
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health")
 def health_check():
