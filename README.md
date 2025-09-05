@@ -22,7 +22,7 @@ Aplicación completa para la evaluación de riesgo de proveedores con backend en
 
 ```bash
 git clone <URL-DEL-REPOSITORIO>
-cd pt-proveedores
+cd prueba-tecnica
 ```
 
 ### 2. Construir y levantar los servicios
@@ -59,17 +59,7 @@ Esto creará:
 ```bash
 cd frontend
 npm install
-```
-
-Crear el archivo de variables de entorno:
-
-```bash
-echo "VITE_API_URL=http://localhost:8000" > .env
-```
-
-Iniciar el servidor de desarrollo:
-
-```bash
+echo VITE_API_URL=http://localhost:8000> .env
 npm run dev
 ```
 
@@ -107,184 +97,46 @@ Una vez completados todos los pasos:
 - Estados de solicitud: pendiente, aprobada, rechazada
 - Tabla con funciones de búsqueda, filtros y paginación
 
-## Comandos útiles para desarrollo
+## Ejecutar tests
 
-### Ver logs de los servicios
-
-```bash
-# Logs del backend
-docker compose logs -f api
-
-# Logs de la base de datos
-docker compose logs -f db
-
-# Logs de todos los servicios
-docker compose logs -f
-```
-
-### Ejecutar tests
+Para ejecutar las pruebas del backend con pytest:
 
 ```bash
 docker compose exec api pytest -v
 ```
 
-### Resetear la base de datos
+Este comando ejecutará todas las pruebas unitarias del proyecto, incluyendo:
+- Tests de autenticación
+- Tests de endpoints de empresas
+- Tests de endpoints de solicitudes
+- Tests del cálculo de riesgo
 
+## Comandos útiles
+
+### Ver logs de los servicios
 ```bash
-# Bajar todas las migraciones
-docker compose exec api alembic downgrade base
+# Logs del backend
+docker compose logs api
 
-# Aplicar migraciones nuevamente
-docker compose exec api alembic upgrade head
+# Logs de la base de datos
+docker compose logs db
 
-# Volver a cargar datos iniciales
-docker compose exec api python seed_data.py
+# Logs en tiempo real
+docker compose logs -f
 ```
 
-### Crear nuevas migraciones
-
+### Reiniciar la base de datos
 ```bash
-docker compose exec api alembic revision --autogenerate -m "descripción del cambio"
+docker compose down
+docker volume rm pt-proveedores_postgres_data
+docker compose up -d --build
+docker compose exec api alembic upgrade head
+docker compose exec api python seed_data.py
 ```
 
 ### Detener los servicios
-
 ```bash
-# Detener contenedores
-docker compose stop
-
-# Detener y eliminar contenedores, redes y volúmenes
-docker compose down
-
-# Eliminar también los volúmenes de datos
-docker compose down -v
-```
-
-## Estructura del proyecto
-
-```
-pt-proveedores/
-├── app/                     # Backend FastAPI
-│   ├── api/                 # Endpoints de la API
-│   │   ├── auth.py         # Autenticación y usuarios
-│   │   ├── companies.py    # CRUD de empresas
-│   │   └── requests.py     # CRUD de solicitudes
-│   ├── models/             # Modelos SQLAlchemy
-│   │   ├── user.py         # Modelo de usuario
-│   │   ├── company.py      # Modelo de empresa
-│   │   └── request.py      # Modelo de solicitud
-│   ├── schemas/            # Esquemas Pydantic
-│   └── services/           # Lógica de negocio
-├── frontend/               # Frontend React
-│   ├── src/
-│   │   ├── components/     # Componentes React
-│   │   ├── api.js         # Cliente HTTP para API
-│   │   ├── AuthContext.jsx # Contexto de autenticación
-│   │   └── App.jsx        # Componente principal
-│   ├── package.json
-│   └── vite.config.js
-├── migrations/             # Migraciones Alembic
-├── tests/                  # Tests del backend
-├── seed_data.py           # Script para datos iniciales
-├── docker-compose.yml     # Configuración de servicios
-├── Dockerfile            # Imagen del backend
-├── requirements.txt      # Dependencias Python
-└── README.md
-```
-
-## Variables de entorno
-
-### Backend
-
-Las variables están configuradas en `docker-compose.yml`:
-
-- `DATABASE_URL`: URL de conexión a PostgreSQL
-- `JWT_SECRET`: Clave secreta para firmar tokens JWT
-- `JWT_ALGORITHM`: Algoritmo de encriptación (HS256)
-
-### Frontend
-
-Crear el archivo `frontend/.env`:
-
-```
-VITE_API_URL=http://localhost:8000
-```
-
-## API Endpoints
-
-### Autenticación
-- `POST /auth/register` - Registrar nuevo usuario
-- `POST /auth/login` - Iniciar sesión (devuelve access_token)
-
-### Empresas
-- `GET /companies/` - Listar empresas (paginado)
-- `POST /companies/` - Crear nueva empresa
-- `GET /companies/{id}` - Obtener empresa por ID
-
-### Solicitudes
-- `GET /requests/` - Listar solicitudes (paginado)
-- `POST /requests/` - Crear nueva solicitud
-- `GET /requests/{id}` - Obtener solicitud por ID
-
-### Paginación
-
-Todos los listados soportan paginación:
-
-```bash
-GET /companies/?page=1&page_size=25
-GET /requests/?page=2&page_size=50
-```
-
-## Solución de problemas
-
-### Error de conexión a la base de datos
-
-```bash
-# Verificar que los contenedores estén corriendo
-docker compose ps
-
-# Reiniciar el servicio de base de datos
-docker compose restart db
-```
-
-### Puerto ya en uso
-
-```bash
-# Verificar qué proceso usa el puerto
-netstat -ano | findstr :8000
-netstat -ano | findstr :5432
-
-# Detener los contenedores y cambiar puertos en docker-compose.yml si es necesario
 docker compose down
 ```
 
-### Problemas con migraciones
-
-```bash
-# Ver el estado actual de las migraciones
-docker compose exec api alembic current
-
-# Ver historial de migraciones
-docker compose exec api alembic history
-
-# Aplicar una migración específica
-docker compose exec api alembic upgrade <revision>
-```
-
-### Limpiar todo y empezar de nuevo
-
-```bash
-# Detener y eliminar todo
-docker compose down -v
-
-# Eliminar imágenes
-docker rmi pt-proveedores-api
-
-# Volver a construir
-docker compose up -d --build
-
-# Aplicar migraciones y seed
-docker compose exec api alembic upgrade head
-docker compose exec api python seed_data.py
-```
 
